@@ -29,6 +29,53 @@ const Data = {
     } else {
       this.state = structuredClone(DEFAULT_DATA);
     }
+    this._migrate();
+  },
+
+  _migrate() {
+    const v = this.state.version || 1;
+    let changed = false;
+    if (v < 2) {
+      const conv = s => s === '早' ? '日' : s === '晚' ? '夜' : s;
+      for (const e of this.state.employees) {
+        if (e.shift === '早' || e.shift === '晚') { e.shift = conv(e.shift); changed = true; }
+      }
+      for (const m of this.state.mobile) {
+        if (Array.isArray(m.shifts)) {
+          const before = m.shifts.join(',');
+          m.shifts = m.shifts.map(conv);
+          if (m.shifts.join(',') !== before) changed = true;
+        }
+      }
+      for (const ym in this.state.schedules) {
+        const sch = this.state.schedules[ym];
+        if (sch?.byDay) {
+          for (const day in sch.byDay) {
+            const slots = sch.byDay[day];
+            if ('早' in slots) { slots['日'] = slots['早']; delete slots['早']; changed = true; }
+            if ('晚' in slots) { slots['夜'] = slots['晚']; delete slots['晚']; changed = true; }
+          }
+        }
+        if (sch?.mobileBusy) {
+          for (const day in sch.mobileBusy) {
+            for (const mid in sch.mobileBusy[day]) {
+              const a = sch.mobileBusy[day][mid];
+              if (a?.shift === '早') { a.shift = '日'; changed = true; }
+              if (a?.shift === '晚') { a.shift = '夜'; changed = true; }
+            }
+          }
+        }
+        if (sch?.conflicts) {
+          for (const c of sch.conflicts) {
+            if (c.shift === '早') { c.shift = '日'; changed = true; }
+            if (c.shift === '晚') { c.shift = '夜'; changed = true; }
+          }
+        }
+      }
+      this.state.version = 2;
+      changed = true;
+    }
+    if (changed) this.persist();
   },
 
   persist() {

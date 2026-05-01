@@ -32,7 +32,8 @@ function renderSites() {
       <div class="list-item-info">
         <div class="list-item-title">${esc(s.name)}</div>
         <div class="list-item-meta">
-          早班 ${s.morningCap} 人(最低 ${s.morningMin}) · 晚班 ${s.eveningCap} 人(最低 ${s.eveningMin})
+          日班 ${s.morningCap} 人(最低 ${s.morningMin}) · 夜班 ${s.eveningCap} 人(最低 ${s.eveningMin})
+          ${s.unitName ? ` · ${esc(s.unitName)}` : ''}
         </div>
       </div>
       <div class="list-item-actions">
@@ -48,25 +49,35 @@ function siteFormHtml(data = {}) {
     <div class="list-item editing">
       <div class="form-row">
         <div class="form-field">
-          <label>案場名稱</label>
+          <label>現場名稱</label>
           <input type="text" id="siteName" value="${esc(data.name || '')}" placeholder="例如 A 社區">
+        </div>
+        <div class="form-field">
+          <label>單位名稱（選填）</label>
+          <input type="text" id="siteUnitName" value="${esc(data.unitName || '')}" placeholder="例如 綜管八處">
         </div>
       </div>
       <div class="form-row">
         <div class="form-field">
-          <label>早班編制</label>
+          <label>現場地址（選填）</label>
+          <input type="text" id="siteAddress" value="${esc(data.address || '')}" placeholder="例如 新北市板橋區...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>日班編制</label>
           <input type="number" id="siteMorningCap" value="${data.morningCap ?? 1}" min="0">
         </div>
         <div class="form-field">
-          <label>早班最低</label>
+          <label>日班最低</label>
           <input type="number" id="siteMorningMin" value="${data.morningMin ?? 1}" min="0">
         </div>
         <div class="form-field">
-          <label>晚班編制</label>
+          <label>夜班編制</label>
           <input type="number" id="siteEveningCap" value="${data.eveningCap ?? 1}" min="0">
         </div>
         <div class="form-field">
-          <label>晚班最低</label>
+          <label>夜班最低</label>
           <input type="number" id="siteEveningMin" value="${data.eveningMin ?? 1}" min="0">
         </div>
       </div>
@@ -81,6 +92,8 @@ function siteFormHtml(data = {}) {
 function readSiteForm() {
   return {
     name: document.getElementById('siteName').value.trim(),
+    unitName: document.getElementById('siteUnitName').value.trim(),
+    address: document.getElementById('siteAddress').value.trim(),
     morningCap: +document.getElementById('siteMorningCap').value,
     morningMin: +document.getElementById('siteMorningMin').value,
     eveningCap: +document.getElementById('siteEveningCap').value,
@@ -89,10 +102,10 @@ function readSiteForm() {
 }
 
 function validateSite(d) {
-  if (!d.name) return '請輸入案場名稱';
+  if (!d.name) return '請輸入現場名稱';
   if (d.morningCap < 0 || d.eveningCap < 0) return '編制不可為負數';
-  if (d.morningMin > d.morningCap) return '早班最低人數不可大於編制';
-  if (d.eveningMin > d.eveningCap) return '晚班最低人數不可大於編制';
+  if (d.morningMin > d.morningCap) return '日班最低人數不可大於編制';
+  if (d.eveningMin > d.eveningCap) return '夜班最低人數不可大於編制';
   return null;
 }
 
@@ -158,7 +171,7 @@ function renderEmployees() {
   list.innerHTML = employees.map(e => {
     const site = Data.getSite(e.siteId);
     const siteName = site ? site.name : '(案場不存在)';
-    const cls = e.shift === '早' ? 'morning' : 'evening';
+    const cls = e.shift === '日' ? 'morning' : 'evening';
     return `
       <div class="list-item" data-id="${e.id}">
         <div class="list-item-info">
@@ -204,8 +217,8 @@ function employeeFormHtml(data = {}) {
         <div class="form-field">
           <label>班別</label>
           <select id="empShift">
-            <option value="早" ${data.shift === '早' ? 'selected' : ''}>早班</option>
-            <option value="晚" ${data.shift === '晚' ? 'selected' : ''}>晚班</option>
+            <option value="日" ${data.shift === '日' ? 'selected' : ''}>日班</option>
+            <option value="夜" ${data.shift === '夜' ? 'selected' : ''}>夜班</option>
           </select>
         </div>
       </div>
@@ -281,7 +294,7 @@ function renderMobile() {
   }
   list.innerHTML = mobile.map(m => {
     const shifts = (m.shifts || []).map(s =>
-      `<span class="shift-badge ${s === '早' ? 'morning' : 'evening'}">${s}班</span>`
+      `<span class="shift-badge ${s === '日' ? 'morning' : 'evening'}">${s}班</span>`
     ).join('');
     return `
       <div class="list-item" data-id="${m.id}">
@@ -299,7 +312,7 @@ function renderMobile() {
 }
 
 function mobileFormHtml(data = {}) {
-  const shifts = data.shifts || ['早', '晚'];
+  const shifts = data.shifts || ['日', '夜'];
   return `
     <div class="list-item editing">
       <div class="form-row">
@@ -310,8 +323,8 @@ function mobileFormHtml(data = {}) {
         <div class="form-field">
           <label>可支援班別</label>
           <div class="checkbox-group">
-            <label><input type="checkbox" id="mobMorning" ${shifts.includes('早') ? 'checked' : ''}> 早班</label>
-            <label><input type="checkbox" id="mobEvening" ${shifts.includes('晚') ? 'checked' : ''}> 晚班</label>
+            <label><input type="checkbox" id="mobDay" ${shifts.includes('日') ? 'checked' : ''}> 日班</label>
+            <label><input type="checkbox" id="mobNight" ${shifts.includes('夜') ? 'checked' : ''}> 夜班</label>
           </div>
         </div>
       </div>
@@ -325,8 +338,8 @@ function mobileFormHtml(data = {}) {
 
 function readMobileForm() {
   const shifts = [];
-  if (document.getElementById('mobMorning').checked) shifts.push('早');
-  if (document.getElementById('mobEvening').checked) shifts.push('晚');
+  if (document.getElementById('mobDay').checked) shifts.push('日');
+  if (document.getElementById('mobNight').checked) shifts.push('夜');
   return {
     name: document.getElementById('mobName').value.trim(),
     shifts

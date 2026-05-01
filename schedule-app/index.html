@@ -70,13 +70,19 @@
     <section id="tab-schedule" class="tab-content">
       <div class="card">
         <div class="schedule-toolbar">
-          <div class="form-field" style="max-width:200px;">
-            <label>選擇月份</label>
-            <input type="month" id="scheduleMonth">
+          <div class="schedule-pickers">
+            <div class="form-field" style="max-width:160px;">
+              <label>選擇月份</label>
+              <input type="month" id="scheduleMonth">
+            </div>
+            <div class="form-field" style="max-width:240px;">
+              <label>案場</label>
+              <select id="scheduleSite"></select>
+            </div>
           </div>
           <div class="schedule-actions">
             <button class="btn btn-primary" id="generateScheduleBtn">⚡ 產生班表</button>
-            <button class="btn" id="exportScheduleBtn">⬇ 匯出 CSV</button>
+            <button class="btn" id="exportScheduleBtn">⬇ 匯出當前案場 CSV</button>
             <button class="btn btn-danger btn-sm" id="clearScheduleBtn">清除班表</button>
           </div>
         </div>
@@ -84,7 +90,7 @@
       </div>
       <div id="scheduleIssues"></div>
       <div class="card schedule-matrix-card">
-        <div id="scheduleMatrix" class="schedule-matrix-container"></div>
+        <div id="scheduleMatrix"></div>
       </div>
     </section>
 

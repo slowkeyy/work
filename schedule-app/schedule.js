@@ -1,10 +1,20 @@
 const ScheduleState = {
   yearMonth: null,
+  selectedSiteId: null,
 };
 
 function getScheduleYM() {
   if (!ScheduleState.yearMonth) ScheduleState.yearMonth = getCurrentYearMonth();
   return ScheduleState.yearMonth;
+}
+
+function mobileShiftLabel(m) {
+  const has日 = (m.shifts || []).includes('日');
+  const has夜 = (m.shifts || []).includes('夜');
+  if (has日 && !has夜) return '日機';
+  if (has夜 && !has日) return '夜機';
+  if (has日 && has夜) return '支援';
+  return '機動';
 }
 
 // ===== 演算法 =====
@@ -25,10 +35,10 @@ function runScheduler(yearMonth) {
 
   const byDay = {};
   for (let d = 1; d <= days; d++) {
-    byDay[d] = { '早': {}, '晚': {} };
+    byDay[d] = { '日': {}, '夜': {} };
     for (const site of sites) {
-      byDay[d]['早'][site.id] = [];
-      byDay[d]['晚'][site.id] = [];
+      byDay[d]['日'][site.id] = [];
+      byDay[d]['夜'][site.id] = [];
     }
   }
 
@@ -66,9 +76,9 @@ function runScheduler(yearMonth) {
 
   // Step 1: 補必休造成的人力缺口
   for (let d = 1; d <= days; d++) {
-    for (const shift of ['早', '晚']) {
+    for (const shift of ['日', '夜']) {
       for (const site of sites) {
-        const min = shift === '早' ? site.morningMin : site.eveningMin;
+        const min = shift === '日' ? site.morningMin : site.eveningMin;
         let current = byDay[d][shift][site.id].length;
         while (current < min) {
           const pick = pickMobile(d, shift, true);
@@ -102,7 +112,7 @@ function runScheduler(yearMonth) {
 
       list.splice(idx, 1);
       const site = Data.getSite(e.siteId);
-      const min = e.shift === '早' ? site.morningMin : site.eveningMin;
+      const min = e.shift === '日' ? site.morningMin : site.eveningMin;
 
       if (list.length >= min) continue;
 
@@ -132,9 +142,31 @@ function renderSchedulePage() {
   const ym = getScheduleYM();
   const monthInput = document.getElementById('scheduleMonth');
   if (monthInput) monthInput.value = ym;
+  updateSiteSelector();
   renderScheduleHeader();
   renderScheduleMatrix();
   renderScheduleIssues();
+}
+
+function updateSiteSelector() {
+  const sel = document.getElementById('scheduleSite');
+  if (!sel) return;
+  const sites = Data.sites();
+  sel.innerHTML = sites.length === 0
+    ? '<option value="">(沒有案場)</option>'
+    : '<option value="">— 選擇案場 —</option>' +
+      sites.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+
+  const validSelected = ScheduleState.selectedSiteId &&
+    sites.some(s => s.id === ScheduleState.selectedSiteId);
+  if (validSelected) {
+    sel.value = ScheduleState.selectedSiteId;
+  } else if (sites.length > 0) {
+    sel.value = sites[0].id;
+    ScheduleState.selectedSiteId = sites[0].id;
+  } else {
+    ScheduleState.selectedSiteId = null;
+  }
 }
 
 function renderScheduleHeader() {
@@ -148,7 +180,7 @@ function renderScheduleHeader() {
 
   if (schedule) {
     const t = new Date(schedule.generatedAt).toLocaleString('zh-TW');
-    info.innerHTML = `${monthType} · 共 ${days} 天 · 上次產生:${esc(t)}`;
+    info.textContent = `${monthType} · 共 ${days} 天 · 上次產生:${t}`;
   } else {
     info.textContent = `${monthType} · 共 ${days} 天 · 尚未產生班表`;
   }
@@ -165,59 +197,124 @@ function renderScheduleMatrix() {
     return;
   }
 
-  const { year, month } = parseYearMonth(ym);
-  const days = daysInMonth(year, month);
   const sites = Data.sites();
-  const firstDow = new Date(year, month - 1, 1).getDay();
-  const dowLabels = ['日', '一', '二', '三', '四', '五', '六'];
-
-  const rows = [];
-  for (const site of sites) {
-    if (site.morningCap > 0) rows.push({ site, shift: '早', min: site.morningMin });
-    if (site.eveningCap > 0) rows.push({ site, shift: '晚', min: site.eveningMin });
-  }
-
-  if (rows.length === 0) {
-    container.innerHTML = '<div class="empty" style="padding:40px; margin:20px;">沒有有效的案場/班別配置</div>';
+  if (sites.length === 0) {
+    container.innerHTML = '<div class="empty" style="padding:40px; margin:20px;">沒有任何案場</div>';
     return;
   }
 
-  let html = '<table class="schedule-table"><thead><tr>';
-  html += '<th class="sticky-col">案場 / 班別</th>';
+  const siteId = ScheduleState.selectedSiteId;
+  const site = siteId ? Data.getSite(siteId) : null;
+
+  if (!site) {
+    container.innerHTML = '<div class="empty" style="padding:40px; margin:20px;">請從上方選擇要顯示的案場</div>';
+    return;
+  }
+
+  container.innerHTML = renderSiteScheduleTable(site, schedule, ym);
+}
+
+function getSiteRowsAndCells(site, schedule, ym) {
+  const { year, month } = parseYearMonth(ym);
+  const days = daysInMonth(year, month);
+
+  const employees = Data.employees().filter(e => e.siteId === site.id);
+  const dayEmps = employees.filter(e => e.shift === '日');
+  const nightEmps = employees.filter(e => e.shift === '夜');
+
+  const mobileUsed = new Set();
+  for (let d = 1; d <= days; d++) {
+    for (const sh of ['日', '夜']) {
+      const list = schedule.byDay[d]?.[sh]?.[site.id] || [];
+      for (const pid of list) {
+        if (Data.getMobile(pid)) mobileUsed.add(pid);
+      }
+    }
+  }
+  const mobiles = Data.mobile().filter(m => mobileUsed.has(m.id));
+  mobiles.sort((a, b) => {
+    const ord = (m) => {
+      const has日 = (m.shifts || []).includes('日');
+      const has夜 = (m.shifts || []).includes('夜');
+      if (has日 && !has夜) return 0;
+      if (has夜 && !has日) return 1;
+      return 2;
+    };
+    return ord(a) - ord(b);
+  });
+
+  const rows = [];
+  for (const e of dayEmps) rows.push({ id: e.id, name: e.name, label: '日班', type: 'emp' });
+  for (const e of nightEmps) rows.push({ id: e.id, name: e.name, label: '夜班', type: 'emp' });
+  for (const m of mobiles) rows.push({ id: m.id, name: m.name, label: mobileShiftLabel(m), type: 'mobile' });
+
+  return rows;
+}
+
+function getCellShift(personId, day, siteId, schedule) {
+  for (const sh of ['日', '夜']) {
+    const list = schedule.byDay[day]?.[sh]?.[siteId] || [];
+    if (list.includes(personId)) return sh;
+  }
+  return '';
+}
+
+function renderSiteScheduleTable(site, schedule, ym) {
+  const { year, month } = parseYearMonth(ym);
+  const days = daysInMonth(year, month);
+  const firstDow = new Date(year, month - 1, 1).getDay();
+  const dowLabels = ['日', '一', '二', '三', '四', '五', '六'];
+
+  const rows = getSiteRowsAndCells(site, schedule, ym);
+
+  let html = `<div class="site-schedule">`;
+  html += `<div class="site-schedule-title">${year} 年 ${month} 月（休息）班表</div>`;
+  html += `<div class="site-schedule-meta">`;
+  html += `<div><span class="meta-label">單位名稱</span><span class="meta-value">${esc(site.unitName || '—')}</span></div>`;
+  html += `<div><span class="meta-label">現場名稱</span><span class="meta-value">${esc(site.name)}</span></div>`;
+  html += `<div><span class="meta-label">現場地址</span><span class="meta-value">${esc(site.address || '—')}</span></div>`;
+  html += `</div>`;
+
+  if (rows.length === 0) {
+    html += `<div class="empty" style="padding:30px; margin:20px;">這個案場本月沒有任何排班</div>`;
+    html += `</div>`;
+    return html;
+  }
+
+  html += `<div class="site-table-scroll"><table class="site-table"><thead>`;
+  html += `<tr><th class="th-name" rowspan="2">姓名</th><th class="th-shift" rowspan="2">班別</th><th class="th-corner">日期</th>`;
   for (let d = 1; d <= days; d++) {
     const dow = (firstDow + d - 1) % 7;
-    const dowCls = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
-    html += `<th class="day-col ${dowCls}"><div class="day-num">${d}</div><div class="dow">${dowLabels[dow]}</div></th>`;
+    const cls = (dow === 0 || dow === 6) ? 'weekend' : '';
+    html += `<th class="day-num ${cls}">${d}</th>`;
   }
-  html += '</tr></thead><tbody>';
+  html += `</tr><tr><th class="th-corner">星期</th>`;
+  for (let d = 1; d <= days; d++) {
+    const dow = (firstDow + d - 1) % 7;
+    const cls = (dow === 0 || dow === 6) ? 'weekend' : '';
+    html += `<th class="dow-label ${cls}">${dowLabels[dow]}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
 
   for (const row of rows) {
-    const shiftCls = row.shift === '早' ? 'morning' : 'evening';
-    html += `<tr><td class="sticky-col">
-      <div class="row-label">${esc(row.site.name)}</div>
-      <span class="shift-badge ${shiftCls}">${row.shift}班</span>
-      <span class="min-info">最低 ${row.min}</span>
-    </td>`;
+    const nameCls = row.type === 'mobile' ? 'mobile-name' : '';
+    html += `<tr><td class="td-name ${nameCls}">${esc(row.name)}</td>`;
+    html += `<td class="td-shift">${row.label}</td>`;
+    html += `<td class="td-corner"></td>`;
     for (let d = 1; d <= days; d++) {
-      const personIds = schedule.byDay[d]?.[row.shift]?.[row.site.id] || [];
-      const understaffed = personIds.length < row.min;
       const dow = (firstDow + d - 1) % 7;
-      const dowCls = dow === 0 ? 'cell-sun' : dow === 6 ? 'cell-sat' : '';
-      let cls = `day-cell ${dowCls}`;
-      if (understaffed) cls += ' understaffed';
-      const cellHtml = personIds.map(pid => {
-        const m = Data.getMobile(pid);
-        if (m) return `<span class="cell-name mobile">${esc(m.name)}</span>`;
-        const e = Data.getEmployee(pid);
-        return `<span class="cell-name">${esc(e?.name || '?')}</span>`;
-      }).join('');
-      html += `<td class="${cls}">${cellHtml || '<span class="cell-empty">—</span>'}</td>`;
+      const weekendCls = (dow === 0 || dow === 6) ? 'weekend' : '';
+      const sh = getCellShift(row.id, d, site.id, schedule);
+      let cls = `day-cell ${weekendCls}`;
+      if (sh === '日') cls += ' day-shift';
+      else if (sh === '夜') cls += ' night-shift';
+      html += `<td class="${cls}">${sh}</td>`;
     }
-    html += '</tr>';
+    html += `</tr>`;
   }
 
-  html += '</tbody></table>';
-  container.innerHTML = html;
+  html += `</tbody></table></div></div>`;
+  return html;
 }
 
 function renderScheduleIssues() {
@@ -286,48 +383,55 @@ function exportScheduleCSV() {
   const ym = getScheduleYM();
   const schedule = Data.getSchedule(ym);
   if (!schedule) {
-    alert('尚未產生班表,請先按「產生班表」');
+    alert('尚未產生班表,請先按「⚡ 產生班表」');
+    return;
+  }
+  const siteId = ScheduleState.selectedSiteId;
+  const site = siteId ? Data.getSite(siteId) : null;
+  if (!site) {
+    alert('請先選擇案場');
     return;
   }
 
   const { year, month } = parseYearMonth(ym);
   const days = daysInMonth(year, month);
-  const sites = Data.sites();
   const firstDow = new Date(year, month - 1, 1).getDay();
   const dowLabels = ['日', '一', '二', '三', '四', '五', '六'];
 
-  const lines = [];
-  const header = ['案場 / 班別'];
-  for (let d = 1; d <= days; d++) {
-    const dow = dowLabels[(firstDow + d - 1) % 7];
-    header.push(`${d} (${dow})`);
-  }
-  lines.push(header.map(csvCell).join(','));
+  const rows = getSiteRowsAndCells(site, schedule, ym);
 
-  for (const site of sites) {
-    for (const shift of ['早', '晚']) {
-      const cap = shift === '早' ? site.morningCap : site.eveningCap;
-      if (cap === 0) continue;
-      const row = [`${site.name} ${shift}班`];
-      for (let d = 1; d <= days; d++) {
-        const personIds = schedule.byDay[d]?.[shift]?.[site.id] || [];
-        const names = personIds.map(pid => {
-          const m = Data.getMobile(pid);
-          if (m) return `${m.name}(機)`;
-          const e = Data.getEmployee(pid);
-          return e?.name || '?';
-        });
-        row.push(names.join(' / '));
-      }
-      lines.push(row.map(csvCell).join(','));
+  const lines = [];
+  lines.push(csvCell(`${year} 年 ${month} 月（休息）班表`));
+  lines.push([
+    csvCell('單位名稱'), csvCell(site.unitName || ''),
+    csvCell('現場名稱'), csvCell(site.name),
+    csvCell('現場地址'), csvCell(site.address || ''),
+  ].join(','));
+  lines.push('');
+
+  const h1 = ['姓名', '班別', '日期'];
+  for (let d = 1; d <= days; d++) h1.push(String(d));
+  lines.push(h1.map(csvCell).join(','));
+
+  const h2 = ['', '', '星期'];
+  for (let d = 1; d <= days; d++) {
+    h2.push(dowLabels[(firstDow + d - 1) % 7]);
+  }
+  lines.push(h2.map(csvCell).join(','));
+
+  for (const row of rows) {
+    const r = [row.name, row.label, ''];
+    for (let d = 1; d <= days; d++) {
+      r.push(getCellShift(row.id, d, site.id, schedule));
     }
+    lines.push(r.map(csvCell).join(','));
   }
 
   const csv = '﻿' + lines.join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `班表_${ym}.csv`;
+  a.download = `${site.name}_班表_${ym}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -346,6 +450,15 @@ function initSchedulePage() {
       renderSchedulePage();
     };
     monthInput._inited = true;
+  }
+
+  const siteSelect = document.getElementById('scheduleSite');
+  if (siteSelect && !siteSelect._inited) {
+    siteSelect.onchange = (e) => {
+      ScheduleState.selectedSiteId = e.target.value || null;
+      renderScheduleMatrix();
+    };
+    siteSelect._inited = true;
   }
 
   const generateBtn = document.getElementById('generateScheduleBtn');

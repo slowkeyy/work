@@ -51,19 +51,19 @@ function renderLeaveSidebar() {
   let html = '';
 
   for (const site of sites) {
-    const morning = employees.filter(e => e.siteId === site.id && e.shift === '早');
-    const evening = employees.filter(e => e.siteId === site.id && e.shift === '晚');
+    const morning = employees.filter(e => e.siteId === site.id && e.shift === '日');
+    const evening = employees.filter(e => e.siteId === site.id && e.shift === '夜');
     if (morning.length === 0 && evening.length === 0) continue;
 
     html += `<div class="leave-group">
       <div class="leave-group-title">${esc(site.name)}</div>`;
 
     if (morning.length > 0) {
-      html += `<div class="leave-subgroup-title">早班</div>`;
+      html += `<div class="leave-subgroup-title">日班</div>`;
       morning.forEach(e => { html += renderPersonRow(e.id, e.name, ym); });
     }
     if (evening.length > 0) {
-      html += `<div class="leave-subgroup-title">晚班</div>`;
+      html += `<div class="leave-subgroup-title">夜班</div>`;
       evening.forEach(e => { html += renderPersonRow(e.id, e.name, ym); });
     }
     html += `</div>`;
@@ -109,7 +109,7 @@ function renderLeaveDetail() {
   let header = '';
   if (emp) {
     const site = Data.getSite(emp.siteId);
-    const shiftCls = emp.shift === '早' ? 'morning' : 'evening';
+    const shiftCls = emp.shift === '日' ? 'morning' : 'evening';
     header = `<h3>${esc(emp.name)}
       <span class="leave-detail-meta">${esc(site?.name || '')} · <span class="shift-badge ${shiftCls}">${emp.shift}班</span></span>
     </h3>`;

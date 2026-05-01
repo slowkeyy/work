@@ -666,3 +666,185 @@ input:focus, select:focus {
 .issue-panel.info { border-left-color: #0066cc; }
 .issue-panel.info h4 { color: #0066cc; }
 .issue-panel.ok { border-left-color: #2e7d32; padding: 12px 18px; }
+
+/* ===== 排班頁:案場單表格式 ===== */
+
+.schedule-pickers {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.site-schedule {
+  padding: 16px;
+}
+
+.site-schedule-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.site-schedule-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  background: white;
+}
+
+.site-schedule-meta > div {
+  display: flex;
+  border-right: 1px solid var(--border);
+  padding: 8px 12px;
+  font-size: 13px;
+  align-items: center;
+}
+
+.site-schedule-meta > div:last-child {
+  border-right: none;
+}
+
+@media (max-width: 700px) {
+  .site-schedule-meta { grid-template-columns: 1fr; }
+  .site-schedule-meta > div { border-right: none; border-bottom: 1px solid var(--border); }
+  .site-schedule-meta > div:last-child { border-bottom: none; }
+}
+
+.site-schedule-meta .meta-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 8px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.site-schedule-meta .meta-value {
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  word-break: break-all;
+}
+
+.site-table-scroll {
+  overflow-x: auto;
+  max-height: 70vh;
+  border: 1px solid var(--border);
+}
+
+.site-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: max-content;
+  background: white;
+}
+
+.site-table th,
+.site-table td {
+  border: 1px solid var(--border);
+  padding: 4px 6px;
+  text-align: center;
+  background: white;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.site-table th.th-name,
+.site-table td.td-name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 80px;
+  background: var(--surface);
+}
+
+.site-table th.th-shift,
+.site-table td.td-shift {
+  position: sticky;
+  left: 80px;
+  z-index: 2;
+  min-width: 60px;
+  background: var(--surface);
+}
+
+.site-table th.th-corner,
+.site-table td.td-corner {
+  position: sticky;
+  left: 140px;
+  z-index: 2;
+  min-width: 44px;
+  background: var(--bg);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.site-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 3;
+  font-weight: 600;
+}
+
+.site-table thead th.th-name,
+.site-table thead th.th-shift,
+.site-table thead th.th-corner {
+  z-index: 4;
+}
+
+.site-table .day-num {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 32px;
+}
+
+.site-table .dow-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.site-table .weekend {
+  background: #ffe5e5 !important;
+  color: #c62828;
+  font-weight: 700;
+}
+
+.site-table thead th.weekend {
+  background: #ffcccc !important;
+  color: #c62828;
+}
+
+.site-table .day-cell {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 32px;
+}
+
+.site-table .day-cell.day-shift { color: #2e7d32; }
+.site-table .day-cell.night-shift { color: #1565c0; }
+
+.site-table tbody td.td-name {
+  text-align: left;
+  padding: 4px 10px;
+  font-weight: 500;
+}
+
+.site-table tbody td.td-shift {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.site-table tbody .mobile-name {
+  color: #946800;
+}
+
+.site-table tbody .mobile-name::before {
+  content: '⚡';
+  font-size: 9px;
+  margin-right: 3px;
+}
