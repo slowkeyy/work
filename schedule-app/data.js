@@ -108,6 +108,18 @@ const Data = {
     }
   },
 
+  getSchedule(yearMonth) {
+    return this.state.schedules[yearMonth] || null;
+  },
+  setSchedule(yearMonth, schedule) {
+    this.state.schedules[yearMonth] = schedule;
+    this.persist();
+  },
+  deleteSchedule(yearMonth) {
+    delete this.state.schedules[yearMonth];
+    this.persist();
+  },
+
   exportJson() {
     return JSON.stringify(this.state, null, 2);
   },

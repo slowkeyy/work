@@ -69,7 +69,22 @@
 
     <section id="tab-schedule" class="tab-content">
       <div class="card">
-        <p class="placeholder">排班頁面 (Phase 3 — 開發中)</p>
+        <div class="schedule-toolbar">
+          <div class="form-field" style="max-width:200px;">
+            <label>選擇月份</label>
+            <input type="month" id="scheduleMonth">
+          </div>
+          <div class="schedule-actions">
+            <button class="btn btn-primary" id="generateScheduleBtn">⚡ 產生班表</button>
+            <button class="btn" id="exportScheduleBtn">⬇ 匯出 CSV</button>
+            <button class="btn btn-danger btn-sm" id="clearScheduleBtn">清除班表</button>
+          </div>
+        </div>
+        <div id="scheduleInfo" class="hint" style="margin-top:8px; margin-bottom:0;"></div>
+      </div>
+      <div id="scheduleIssues"></div>
+      <div class="card schedule-matrix-card">
+        <div id="scheduleMatrix" class="schedule-matrix-container"></div>
       </div>
     </section>
 
@@ -90,6 +105,7 @@
 
   <script src="data.js"></script>
   <script src="leave.js"></script>
+  <script src="schedule.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

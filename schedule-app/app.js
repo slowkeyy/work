@@ -13,6 +13,7 @@ function initTabs() {
         c.classList.toggle('active', c.id === `tab-${tab}`));
       if (tab === 'backup') updateStorageInfo();
       if (tab === 'leave') renderLeavePage();
+      if (tab === 'schedule') renderSchedulePage();
     });
   });
 }
@@ -472,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBackup();
   setupEventDelegation();
   initLeavePage();
+  initSchedulePage();
   renderAll();
   updateStorageInfo();
 });
