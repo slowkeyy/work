@@ -54,8 +54,10 @@ const Data = {
     if (site) { Object.assign(site, data); this.persist(); }
   },
   deleteSite(id) {
+    const removedEmps = this.state.employees.filter(e => e.siteId === id).map(e => e.id);
     this.state.sites = this.state.sites.filter(s => s.id !== id);
     this.state.employees = this.state.employees.filter(e => e.siteId !== id);
+    removedEmps.forEach(eid => this._cleanupLeaves(eid));
     this.persist();
   },
 
@@ -71,6 +73,7 @@ const Data = {
   },
   deleteEmployee(id) {
     this.state.employees = this.state.employees.filter(e => e.id !== id);
+    this._cleanupLeaves(id);
     this.persist();
   },
 
@@ -86,7 +89,23 @@ const Data = {
   },
   deleteMobile(id) {
     this.state.mobile = this.state.mobile.filter(m => m.id !== id);
+    this._cleanupLeaves(id);
     this.persist();
+  },
+
+  getPersonLeaves(yearMonth, personId) {
+    const month = this.state.leaves[yearMonth] || {};
+    return month[personId] || { mandatory: [], preferred: [] };
+  },
+  setPersonLeaves(yearMonth, personId, leaves) {
+    if (!this.state.leaves[yearMonth]) this.state.leaves[yearMonth] = {};
+    this.state.leaves[yearMonth][personId] = leaves;
+    this.persist();
+  },
+  _cleanupLeaves(personId) {
+    for (const ym in this.state.leaves) {
+      if (this.state.leaves[ym][personId]) delete this.state.leaves[ym][personId];
+    }
   },
 
   exportJson() {

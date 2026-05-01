@@ -12,6 +12,7 @@ function initTabs() {
       document.querySelectorAll('.tab-content').forEach(c =>
         c.classList.toggle('active', c.id === `tab-${tab}`));
       if (tab === 'backup') updateStorageInfo();
+      if (tab === 'leave') renderLeavePage();
     });
   });
 }
@@ -470,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addMobileBtn').onclick = showAddMobile;
   setupBackup();
   setupEventDelegation();
+  initLeavePage();
   renderAll();
   updateStorageInfo();
 });

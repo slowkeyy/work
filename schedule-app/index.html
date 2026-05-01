@@ -48,7 +48,22 @@
 
     <section id="tab-leave" class="tab-content">
       <div class="card">
-        <p class="placeholder">休假輸入頁面 (Phase 2 — 開發中)</p>
+        <div class="leave-toolbar">
+          <div class="form-field" style="max-width:200px;">
+            <label>選擇月份</label>
+            <input type="month" id="leaveMonth">
+          </div>
+          <div id="leaveMonthInfo" class="hint" style="margin:0;"></div>
+        </div>
+      </div>
+      <div class="leave-layout">
+        <div class="card leave-sidebar-card">
+          <h3 class="leave-sidebar-title">人員清單</h3>
+          <div id="leaveSidebar" class="leave-sidebar"></div>
+        </div>
+        <div class="card leave-detail-card">
+          <div id="leaveDetail" class="leave-detail"></div>
+        </div>
       </div>
     </section>
 
@@ -74,6 +89,7 @@
   </main>
 
   <script src="data.js"></script>
+  <script src="leave.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
